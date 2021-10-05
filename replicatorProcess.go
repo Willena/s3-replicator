@@ -3,26 +3,26 @@ package main
 import (
 	"S3Replicator/config"
 	eventProcessor "S3Replicator/eventProcessor"
-	"S3Replicator/handlers"
 	"S3Replicator/queue"
+	"S3Replicator/receivers"
 	"fmt"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	log "github.com/sirupsen/logrus"
 	"strings"
 )
 
-func HandlerFromType(handlerType string, config config.Config, notificationChannel *queue.EventChannelQueue) (handlers.S3EventReceiver, error) {
-	var ev handlers.InitializableEventReceiver
+func HandlerFromType(handlerType string, config config.Config, notificationChannel *queue.EventChannelQueue) (receivers.S3EventReceiver, error) {
+	var ev receivers.InitializableEventReceiver
 
 	switch handlerType {
-	case handlers.AMQP_TYPE_NAME:
-		ev = &handlers.AMQPEventHandler{Config: config.AMQP, NotificationChannel: notificationChannel}
+	case receivers.AMQP_TYPE_NAME:
+		ev = &receivers.AMQPEventHandler{Config: config.AMQP, NotificationChannel: notificationChannel}
 		break
-	case handlers.HTTP_TYPE_NAME:
-		ev = &handlers.HTTPEventHandler{Config: config.Http, NotificationChannel: notificationChannel}
+	case receivers.HTTP_TYPE_NAME:
+		ev = &receivers.HTTPEventHandler{Config: config.Http, NotificationChannel: notificationChannel}
 		break
-	case handlers.KAFKA_TYPE_NAME:
-		ev = &handlers.KafkaEventHandler{Config: config.Kafka, NotificationChannel: notificationChannel}
+	case receivers.KAFKA_TYPE_NAME:
+		ev = &receivers.KafkaEventHandler{Config: config.Kafka, NotificationChannel: notificationChannel}
 		break
 	default:
 		return nil, fmt.Errorf("%s is not a recognized handler type", handlerType)
@@ -34,12 +34,12 @@ func HandlerFromType(handlerType string, config config.Config, notificationChann
 		return nil, err
 	}
 
-	return ev.(handlers.S3EventReceiver), nil
+	return ev.(receivers.S3EventReceiver), nil
 
 }
 
 type Replicator struct {
-	handler            handlers.S3EventReceiver
+	handler            receivers.S3EventReceiver
 	notificationChanel *queue.EventChannelQueue
 	stop               bool
 	eventProcessor     eventProcessor.Processor

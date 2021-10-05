@@ -1,6 +1,6 @@
 package config
 
-import "S3Replicator/handlers"
+import "S3Replicator/receivers"
 
 type S3Configuration struct {
 	Endpoint  string `long:"endpoint" description:"URL to the S3" required:"true" env:"ENDPOINT"`
@@ -16,9 +16,9 @@ type Config struct {
 		Source      S3Configuration `group:"S3 Source Configuration" namespace:"source" env-namespace:"SOURCE" required:"true"`
 		Destination S3Configuration `group:"S3 Destination Configuration" namespace:"destination" env-namespace:"DESTINATION" required:"true"`
 	} `group:"S3 Configuration" namespace:"s3" env-namespace:"S3"`
-	AMQP              handlers.AMQPCommandLineConfig  `group:"AMQP Configuration" namespace:"amqp" env-namespace:"AMQP"`
-	Kafka             handlers.KafkaCommandLineConfig `group:"Kafka Configuration" namespace:"kafka" env-namespace:"KAFKA"`
-	Http              handlers.HTTPCommandLineConfig  `group:"Http Server Configuration" namespace:"http" env-namespace:"HTTP"`
-	EventSource       string                          `long:"queue-type" choice:"kafka" choice:"amqp" choice:"http" required:"true" default:"http"`
-	InternalQueueSize uint                            `long:"internal-queue-size" default:"5000" required:"true"`
+	AMQP              receivers.AMQPCommandLineConfig  `group:"AMQP Configuration" namespace:"amqp" env-namespace:"AMQP"`
+	Kafka             receivers.KafkaCommandLineConfig `group:"Kafka Configuration" namespace:"kafka" env-namespace:"KAFKA"`
+	Http              receivers.HTTPCommandLineConfig  `group:"Http Server Configuration" namespace:"http" env-namespace:"HTTP"`
+	EventSource       string                           `long:"queue-type" choice:"kafka" choice:"amqp" choice:"http" required:"true" default:"http"`
+	InternalQueueSize uint                             `long:"internal-queue-size" default:"5000" required:"true"`
 }

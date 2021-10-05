@@ -1,4 +1,4 @@
-package handlers
+package receivers
 
 import (
 	"S3Replicator/queue"

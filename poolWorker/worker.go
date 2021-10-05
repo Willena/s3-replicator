@@ -30,7 +30,7 @@ func NewWorker(id uint, readyPool chan chan Work, done *sync.WaitGroup) *worker 
 
 func (w *worker) Process(work Work) {
 	//Do the work
-	defer func() {
+	defer func() { //Capture any panic or error
 		if r := recover(); r != nil {
 			const size = 64 << 10
 			buf := make([]byte, size)

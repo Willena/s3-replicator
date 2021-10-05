@@ -38,7 +38,6 @@ func (receiver *BasicProcessor) Init() error {
 }
 
 func createMinioClient(configuration config.S3Configuration) (*minio.Client, error) {
-
 	minioUrl, err := url.Parse(configuration.Endpoint)
 	if err != nil {
 		return nil, err
