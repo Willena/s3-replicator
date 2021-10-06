@@ -15,7 +15,7 @@ const AMQP_TYPE_NAME = "amqp"
 type AMQPCommandLineConfig struct {
 	Url       string `long:"url" description:"the url for the AMQP client" required:"false" env:"URL"`
 	QueueName string `long:"queue-name" description:"the name of the AMQP queue" required:"false" env:"QUEUE_NAME"`
-	Exchange  string `long:"exchange-type" description:"the name of the AMQP exchange" required:"false" env:" EXCHANGE_NAME"`
+	Exchange  string `long:"exchange" description:"the name of the AMQP exchange" required:"false" env:" EXCHANGE_NAME"`
 }
 
 type AMQPEventHandler struct {
@@ -72,7 +72,7 @@ func (A *AMQPEventHandler) messageReceive() error {
 
 func (A *AMQPEventHandler) Init() error {
 	var err error
-	A.connection, err = amqp.Dial("amqp://" + A.Config.Url)
+	A.connection, err = amqp.Dial(A.Config.Url)
 	if err != nil {
 		return err
 	}
