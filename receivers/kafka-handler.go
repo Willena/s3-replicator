@@ -15,7 +15,7 @@ type KafkaCommandLineConfig struct {
 	BrokerList     []string          `long:"broker-list" description:"List of broker to connect to" required:"false" env:"BROKER_LIST"`
 	Topics         []string          `long:"topics" description:"Topics to listen" required:"false" env:"TOPICs"`
 	ConsumerConfig map[string]string `long:"consumer-config" description:"Map of parameters for the kafka consumer" required:"false" env:"CONSUMER_CONFIG"`
-	GroupId        string            `long:"group-id" description:"Consumer group id" required:"true" env:"GROUP_ID"`
+	GroupId        string            `long:"group-id" description:"Consumer group id" required:"false" env:"GROUP_ID"`
 }
 
 type KafkaEventHandler struct {
