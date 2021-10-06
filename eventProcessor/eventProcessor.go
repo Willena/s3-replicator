@@ -79,7 +79,7 @@ func (receiver *BasicProcessor) processPostPut(event *notification.Event) error 
 		log.Error("Could not send object !", err)
 		return err
 	}
-	log.Debug("Uploaded ", uploadInfo.Size, " byes to destination S3 ", uploadInfo.ETag)
+	log.Debug("Key: ", uploadInfo.Key, "Uploaded ", uploadInfo.Size, " byes to destination S3 ", uploadInfo.ETag)
 	return err
 }
 
@@ -105,9 +105,8 @@ func (receiver *BasicProcessor) ProcessEvent(event *notification.Event) error {
 		return receiver.processPostPut(event)
 	case notification.ObjectCreatedPost:
 		return receiver.processPostPut(event)
-	//case notification.ObjectCreatedCompleteMultipartUpload:
-	//	receiver.processPostPut(event)
-	//	return
+	case notification.ObjectCreatedCompleteMultipartUpload:
+		return receiver.processPostPut(event)
 	case notification.ObjectRemovedDelete:
 		err := receiver.dstClient.RemoveObject(context.Background(), receiver.Destination.Bucket, event.S3.Object.Key, minio.RemoveObjectOptions{
 			VersionID: event.S3.Object.VersionID,
@@ -116,7 +115,7 @@ func (receiver *BasicProcessor) ProcessEvent(event *notification.Event) error {
 			log.Error("Could not remove object ", err)
 			return err
 		}
-		log.Info("Object removed !")
+		log.Info("Key: ", event.S3.Object.Key, " Object removed !")
 	default:
 		log.Trace(event.EventName + " Not implemented ")
 		return nil
