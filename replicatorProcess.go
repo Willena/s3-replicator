@@ -86,7 +86,7 @@ func NewReplicator(config config.Config) (*Replicator, error) {
 		return nil, err
 	}
 
-	processor := &eventProcessor.MultiThreadProcessor{BasicProcessor: eventProcessor.BasicProcessor{
+	processor := &eventProcessor.MultiThreadProcessor{Processor: &eventProcessor.BasicProcessor{
 		Source:      config.S3.Source,
 		Destination: config.S3.Destination,
 	}, WorkerNumber: 30}

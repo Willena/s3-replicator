@@ -79,7 +79,7 @@ func (receiver *BasicProcessor) processPostPut(event *notification.Event) error 
 		log.Error("Could not send object !", err)
 		return err
 	}
-	log.Debug("Key: ", uploadInfo.Key, "Uploaded ", uploadInfo.Size, " byes to destination S3 ", uploadInfo.ETag)
+	log.Debug("Key: ", uploadInfo.Key, " Uploaded ", uploadInfo.Size, " byes to destination S3 ", uploadInfo.ETag)
 	return err
 }
 
