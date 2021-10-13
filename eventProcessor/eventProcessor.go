@@ -2,11 +2,13 @@ package eventProcessor
 
 import (
 	"S3Replicator/config"
+	"S3Replicator/middleware"
 	"context"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	log "github.com/sirupsen/logrus"
+	"io"
 	"net/url"
 )
 
@@ -15,6 +17,7 @@ type BasicProcessor struct {
 	Destination config.S3Configuration
 	srcClient   *minio.Client
 	dstClient   *minio.Client
+	MiddleWares []middleware.MiddleWare
 }
 
 func (receiver *BasicProcessor) Init() error {
@@ -34,6 +37,10 @@ func (receiver *BasicProcessor) Init() error {
 	receiver.dstClient = dest
 	log.Info("Created dest S3 client")
 
+	for _, middleWare := range receiver.MiddleWares {
+		middleWare.Init()
+	}
+
 	return nil
 }
 
@@ -48,6 +55,24 @@ func createMinioClient(configuration config.S3Configuration) (*minio.Client, err
 		Secure: minioUrl.Scheme == "https",
 		Region: configuration.Region,
 	})
+}
+
+func (receiver *BasicProcessor) sendObject(event *notification.Event, reader io.Reader, objectInfo minio.ObjectInfo) error {
+	log.Debug("Source Object is ", objectInfo.Size, " bytes long ! ")
+
+	uploadInfo, err := receiver.dstClient.PutObject(context.Background(), receiver.Destination.Bucket, objectInfo.Key, reader, objectInfo.Size, minio.PutObjectOptions{
+		StorageClass: receiver.Destination.Class,
+		UserMetadata: objectInfo.UserMetadata,
+		UserTags:     objectInfo.UserTags,
+		ContentType:  objectInfo.ContentType,
+	})
+
+	if err != nil {
+		log.Error("Could not send object !", err)
+		return err
+	}
+	log.Debug("Key: ", uploadInfo.Key, " Uploaded ", uploadInfo.Size, " byes to destination S3 ", uploadInfo.ETag)
+	return nil
 }
 
 func (receiver *BasicProcessor) processPostPut(event *notification.Event) error {
@@ -66,21 +91,18 @@ func (receiver *BasicProcessor) processPostPut(event *notification.Event) error 
 		return err
 	}
 
-	log.Debug("Source Object is ", objectInfo.Size, " bytes long ! ")
-
-	uploadInfo, err := receiver.dstClient.PutObject(context.Background(), receiver.Destination.Bucket, event.S3.Object.Key, objectReader, objectInfo.Size, minio.PutObjectOptions{
-		StorageClass: receiver.Destination.Class,
-		UserMetadata: objectInfo.UserMetadata,
-		UserTags:     objectInfo.UserTags,
-		ContentType:  objectInfo.ContentType,
-	})
-
-	if err != nil {
-		log.Error("Could not send object !", err)
-		return err
+	var finalReader io.ReadCloser = objectReader
+	var finalObjectInfo = objectInfo
+	for _, middleWare := range receiver.MiddleWares {
+		finalReader, finalObjectInfo, err = middleWare.Do(event, objectReader, objectInfo)
+		if err != nil {
+			log.Error("Could not apply middle ware ", middleWare.Name(), " to object ", event.S3.Object.Key)
+			return err
+		}
 	}
-	log.Debug("Key: ", uploadInfo.Key, " Uploaded ", uploadInfo.Size, " byes to destination S3 ", uploadInfo.ETag)
-	return err
+	defer finalReader.Close()
+
+	return receiver.sendObject(event, finalReader, finalObjectInfo)
 }
 
 func (receiver *BasicProcessor) readKey(event *notification.Event) {

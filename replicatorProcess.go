@@ -3,6 +3,7 @@ package main
 import (
 	"S3Replicator/config"
 	eventProcessor "S3Replicator/eventProcessor"
+	"S3Replicator/middleware"
 	"S3Replicator/queue"
 	"S3Replicator/receivers"
 	"fmt"
@@ -89,6 +90,7 @@ func NewReplicator(config config.Config) (*Replicator, error) {
 	processor := &eventProcessor.MultiThreadProcessor{Processor: &eventProcessor.BasicProcessor{
 		Source:      config.S3.Source,
 		Destination: config.S3.Destination,
+		MiddleWares: []middleware.MiddleWare{&middleware.Obfuscate{}, &middleware.CipherFile{}},
 	}, WorkerNumber: 30}
 
 	err = processor.Init()
