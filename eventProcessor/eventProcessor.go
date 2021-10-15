@@ -1,13 +1,13 @@
 package eventProcessor
 
 import (
-	"S3Replicator/config"
-	"S3Replicator/middleware"
 	"context"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	log "github.com/sirupsen/logrus"
+	"github.com/willena/S3Replicator/config"
+	"github.com/willena/S3Replicator/middleware"
 	"io"
 	"net/url"
 )
@@ -91,18 +91,29 @@ func (receiver *BasicProcessor) processPostPut(event *notification.Event) error 
 		return err
 	}
 
-	var finalReader io.ReadCloser = objectReader
-	var finalObjectInfo = objectInfo
+	// Handle middlewares
+	var finalReaders = []io.Reader{objectReader}
+	var finalObjectInfos = []minio.ObjectInfo{objectInfo}
+
+	defer objectReader.Close()
+
 	for _, middleWare := range receiver.MiddleWares {
-		finalReader, finalObjectInfo, err = middleWare.Do(event, objectReader, objectInfo)
+		finalReaders, finalObjectInfos, err = middleWare.Do(event, finalReaders, finalObjectInfos)
 		if err != nil {
 			log.Error("Could not apply middle ware ", middleWare.Name(), " to object ", event.S3.Object.Key)
 			return err
 		}
 	}
-	defer finalReader.Close()
-
-	return receiver.sendObject(event, finalReader, finalObjectInfo)
+	//TODO: Handle all closes...
+	//defer finalReaders.Close()
+	//Send all files / parts after middlewares
+	for i, reader := range finalReaders {
+		err = receiver.sendObject(event, reader, finalObjectInfos[i])
+		if err != nil {
+			return err
+		}
+	}
+	return err
 }
 
 func (receiver *BasicProcessor) readKey(event *notification.Event) {

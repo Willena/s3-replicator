@@ -1,6 +1,6 @@
 package config
 
-import "S3Replicator/receivers"
+import "github.com/willena/S3Replicator/receivers"
 
 type S3Configuration struct {
 	Endpoint  string `long:"endpoint" description:"URL to the S3" required:"true" env:"ENDPOINT"`

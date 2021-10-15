@@ -1,14 +1,14 @@
 package main
 
 import (
-	"S3Replicator/config"
-	eventProcessor "S3Replicator/eventProcessor"
-	"S3Replicator/middleware"
-	"S3Replicator/queue"
-	"S3Replicator/receivers"
 	"fmt"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	log "github.com/sirupsen/logrus"
+	"github.com/willena/S3Replicator/config"
+	eventProcessor "github.com/willena/S3Replicator/eventProcessor"
+	"github.com/willena/S3Replicator/middleware"
+	"github.com/willena/S3Replicator/queue"
+	"github.com/willena/S3Replicator/receivers"
 	"strings"
 )
 
@@ -90,7 +90,7 @@ func NewReplicator(config config.Config) (*Replicator, error) {
 	processor := &eventProcessor.MultiThreadProcessor{Processor: &eventProcessor.BasicProcessor{
 		Source:      config.S3.Source,
 		Destination: config.S3.Destination,
-		MiddleWares: []middleware.MiddleWare{&middleware.Obfuscate{}, &middleware.CipherFile{}},
+		MiddleWares: []middleware.MiddleWare{&middleware.Split{}, &middleware.Obfuscate{}, &middleware.CipherFile{}},
 	}, WorkerNumber: 30}
 
 	err = processor.Init()

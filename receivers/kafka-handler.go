@@ -1,12 +1,12 @@
 package receivers
 
 import (
-	"S3Replicator/queue"
 	"context"
 	"encoding/json"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	kafka "github.com/segmentio/kafka-go"
 	log "github.com/sirupsen/logrus"
+	"github.com/willena/S3Replicator/queue"
 )
 
 const KAFKA_TYPE_NAME = "kafka"

@@ -1,9 +1,9 @@
 package eventProcessor
 
 import (
-	"S3Replicator/poolWorker"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	log "github.com/sirupsen/logrus"
+	"github.com/willena/S3Replicator/poolWorker"
 )
 
 type MultiThreadProcessor struct {

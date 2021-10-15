@@ -1,12 +1,12 @@
 package receivers
 
 import (
-	"S3Replicator/queue"
 	"encoding/json"
 	"fmt"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	amqp "github.com/rabbitmq/amqp091-go"
 	log "github.com/sirupsen/logrus"
+	"github.com/willena/S3Replicator/queue"
 	"math/rand"
 )
 

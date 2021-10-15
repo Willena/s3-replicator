@@ -1,9 +1,9 @@
 package main
 
 import (
-	"S3Replicator/config"
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
+	"github.com/willena/S3Replicator/config"
 	"os"
 )
 

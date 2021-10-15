@@ -1,11 +1,11 @@
 package receivers
 
 import (
-	"S3Replicator/queue"
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	log "github.com/sirupsen/logrus"
+	"github.com/willena/S3Replicator/queue"
 	"io"
 	"net/http"
 	"strconv"

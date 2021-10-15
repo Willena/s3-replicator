@@ -9,11 +9,13 @@ import (
 	"io"
 )
 
+var obfuscateLogger = log.WithField("middleware", "obfuscate")
+
 type Obfuscate struct {
 }
 
 func (o *Obfuscate) Init() {
-	log.Debug("Nothing to init in obfuscate middleware")
+	obfuscateLogger.Info("Object names will be obfuscated")
 	return
 }
 
@@ -21,11 +23,17 @@ func (o *Obfuscate) Name() string {
 	return "Obfuscate"
 }
 
-func (o *Obfuscate) Do(event *notification.Event, reader io.ReadCloser, objectInfo minio.ObjectInfo) (io.ReadCloser, minio.ObjectInfo, error) {
-	sum := sha256.Sum256([]byte(objectInfo.Key))
-	objectInfo.Key = fmt.Sprintf("%x", sum)
+func (o *Obfuscate) Do(event *notification.Event, readers []io.Reader, objectInfos []minio.ObjectInfo) ([]io.Reader, []minio.ObjectInfo, error) {
 
-	log.Debug("Old Object key ", event.S3.Object.Key, " New Object key ", objectInfo.Key)
+	tmpInfos := make([]minio.ObjectInfo, len(objectInfos))
 
-	return reader, objectInfo, nil
+	for i, info := range objectInfos {
+		oldKey := info.Key
+		sum := sha256.Sum256([]byte(info.Key))
+		info.Key = fmt.Sprintf("%x", sum)
+		obfuscateLogger.Debug("Old Object key ", oldKey, " New Object key ", info.Key)
+		tmpInfos[i] = info
+	}
+
+	return readers, tmpInfos, nil
 }

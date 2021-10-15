@@ -8,6 +8,6 @@ import (
 
 type MiddleWare interface {
 	Init()
-	Do(event *notification.Event, reader io.ReadCloser, objectInfo minio.ObjectInfo) (io.ReadCloser, minio.ObjectInfo, error)
+	Do(event *notification.Event, readers []io.Reader, objectInfo []minio.ObjectInfo) ([]io.Reader, []minio.ObjectInfo, error)
 	Name() string
 }
