@@ -7,6 +7,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/notification"
 	log "github.com/sirupsen/logrus"
 	"github.com/willena/S3Replicator/config"
+	"github.com/willena/S3Replicator/manifest"
 	"github.com/willena/S3Replicator/middleware"
 	"io"
 	"net/url"
@@ -57,22 +58,25 @@ func createMinioClient(configuration config.S3Configuration) (*minio.Client, err
 	})
 }
 
-func (receiver *BasicProcessor) sendObject(event *notification.Event, reader io.Reader, objectInfo minio.ObjectInfo) error {
+func (receiver *BasicProcessor) sendObject(event *notification.Event, reader io.Reader, objectInfo manifest.Item) (manifest.Item, error) {
 	log.Debug("Source Object is ", objectInfo.Size, " bytes long ! ")
 
-	uploadInfo, err := receiver.dstClient.PutObject(context.Background(), receiver.Destination.Bucket, objectInfo.Key, reader, objectInfo.Size, minio.PutObjectOptions{
+	uploadInfo, err := receiver.dstClient.PutObject(context.Background(), receiver.Destination.Bucket, objectInfo.ObjectId, reader, objectInfo.ObjectInfo.Size, minio.PutObjectOptions{
 		StorageClass: receiver.Destination.Class,
-		UserMetadata: objectInfo.UserMetadata,
-		UserTags:     objectInfo.UserTags,
-		ContentType:  objectInfo.ContentType,
+		UserMetadata: objectInfo.ObjectInfo.UserMetadata,
+		UserTags:     objectInfo.ObjectInfo.UserTags,
+		ContentType:  objectInfo.ObjectInfo.ContentType,
 	})
 
 	if err != nil {
 		log.Error("Could not send object !", err)
-		return err
+		return manifest.Item{}, err
 	}
-	log.Debug("Key: ", uploadInfo.Key, " Uploaded ", uploadInfo.Size, " byes to destination S3 ", uploadInfo.ETag)
-	return nil
+
+	log.Debug("Key: ", uploadInfo.Key, " Uploaded ", uploadInfo.Size, " byes to destination S3 ", uploadInfo.ETag, " version is ", uploadInfo.VersionID)
+	nobjinfo := objectInfo
+	nobjinfo.VersionId = uploadInfo.VersionID
+	return nobjinfo, err
 }
 
 func (receiver *BasicProcessor) processPostPut(event *notification.Event) error {
@@ -93,12 +97,12 @@ func (receiver *BasicProcessor) processPostPut(event *notification.Event) error 
 
 	// Handle middlewares
 	var finalReaders = []io.Reader{objectReader}
-	var finalObjectInfos = []minio.ObjectInfo{objectInfo}
+	var finalObjectInfos = []manifest.Item{manifest.WrapObjectInfo(objectInfo)}
 
 	defer objectReader.Close()
 
 	for _, middleWare := range receiver.MiddleWares {
-		finalReaders, finalObjectInfos, err = middleWare.Do(event, finalReaders, finalObjectInfos)
+		finalReaders, finalObjectInfos, err = middleWare.DoOnCreate(event, finalReaders, finalObjectInfos)
 		if err != nil {
 			log.Error("Could not apply middle ware ", middleWare.Name(), " to object ", event.S3.Object.Key)
 			return err
@@ -108,10 +112,11 @@ func (receiver *BasicProcessor) processPostPut(event *notification.Event) error 
 	//defer finalReaders.Close()
 	//Send all files / parts after middlewares
 	for i, reader := range finalReaders {
-		err = receiver.sendObject(event, reader, finalObjectInfos[i])
+		_, err = receiver.sendObject(event, reader, finalObjectInfos[i])
 		if err != nil {
 			return err
 		}
+		finalObjectInfos[i].Commit()
 	}
 	return err
 }
@@ -141,17 +146,43 @@ func (receiver *BasicProcessor) ProcessEvent(event *notification.Event) error {
 	case notification.ObjectCreatedCompleteMultipartUpload:
 		return receiver.processPostPut(event)
 	case notification.ObjectRemovedDelete:
-		err := receiver.dstClient.RemoveObject(context.Background(), receiver.Destination.Bucket, event.S3.Object.Key, minio.RemoveObjectOptions{
-			VersionID: event.S3.Object.VersionID,
-		})
-		if err != nil {
-			log.Error("Could not remove object ", err)
-			return err
-		}
-		log.Info("Key: ", event.S3.Object.Key, " Object removed !")
+		return receiver.removeObject(event)
 	default:
 		log.Trace(event.EventName + " Not implemented ")
 		return nil
 	}
-	return nil
+}
+
+func (receiver *BasicProcessor) removeObject(event *notification.Event) error {
+
+	// Handle middlewares
+	var finalReaders = []io.Reader{nil}
+	var finalObjectInfos = []manifest.Item{manifest.WrapEvent(event)}
+
+	for _, middleWare := range receiver.MiddleWares {
+		finalReaders, finalObjectInfos, err = middleWare.DoOnCreate(event, finalReaders, finalObjectInfos)
+		if err != nil {
+			log.Error("Could not apply middle ware ", middleWare.Name(), " to object ", event.S3.Object.Key)
+			return err
+		}
+	}
+	//TODO: Handle all closes...
+	//defer finalReaders.Close()
+	//Send all files / parts after middlewares
+	for i, reader := range finalReaders {
+		_, err = receiver.sendObject(event, reader, finalObjectInfos[i])
+		if err != nil {
+			return err
+		}
+		finalObjectInfos[i].Commit()
+	}
+
+	err := receiver.dstClient.RemoveObject(context.Background(), receiver.Destination.Bucket, event.S3.Object.Key, minio.RemoveObjectOptions{
+		VersionID: event.S3.Object.VersionID,
+	})
+	if err != nil {
+		log.Error("Could not remove object ", err)
+		return err
+	}
+	log.Info("Key: ", event.S3.Object.Key, " Object removed !")
 }

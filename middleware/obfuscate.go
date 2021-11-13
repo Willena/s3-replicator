@@ -3,9 +3,9 @@ package middleware
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/notification"
 	log "github.com/sirupsen/logrus"
+	"github.com/willena/S3Replicator/manifest"
 	"io"
 )
 
@@ -23,17 +23,22 @@ func (o *Obfuscate) Name() string {
 	return "Obfuscate"
 }
 
-func (o *Obfuscate) Do(event *notification.Event, readers []io.Reader, objectInfos []minio.ObjectInfo) ([]io.Reader, []minio.ObjectInfo, error) {
+func (o *Obfuscate) DoOnCreate(event *notification.Event, readers []io.Reader, objectInfos []manifest.Item) ([]io.Reader, []manifest.Item, error) {
 
-	tmpInfos := make([]minio.ObjectInfo, len(objectInfos))
+	tmpInfos := make([]manifest.Item, len(objectInfos))
 
 	for i, info := range objectInfos {
-		oldKey := info.Key
-		sum := sha256.Sum256([]byte(info.Key))
-		info.Key = fmt.Sprintf("%x", sum)
-		obfuscateLogger.Debug("Old Object key ", oldKey, " New Object key ", info.Key)
+		oldKey := info.ObjectId
+		sum := sha256.Sum256([]byte(info.ObjectId))
+		info.ObjectId = fmt.Sprintf("%x", sum)
+		obfuscateLogger.Debug("Old Object key ", oldKey, " New Object key ", info.ObjectId)
+		info.ObjectInfo.Key = info.ObjectId
 		tmpInfos[i] = info
 	}
 
 	return readers, tmpInfos, nil
+}
+
+func (c *Obfuscate) DoOnRemove(event *notification.Event, objectInfo []manifest.Item) ([]manifest.Item, error) {
+	return objectInfo, nil
 }

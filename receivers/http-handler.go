@@ -55,7 +55,7 @@ func (H *HTTPEventHandler) handleWebhook(w http.ResponseWriter, r *http.Request)
 
 func (H *HTTPEventHandler) Init() error {
 	log.Info("Initializing http server...")
-	//Do init !
+	//DoOnCreate init !
 	router := mux.NewRouter()
 
 	router.Methods("POST", "GET").Path("/webhook/event").HandlerFunc(H.handleWebhook)
